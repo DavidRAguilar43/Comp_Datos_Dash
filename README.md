@@ -238,18 +238,47 @@ El dashboard utiliza una paleta de colores pasteles apropiada para contexto méd
 - Las visualizaciones son completamente interactivas y responsivas
 - El sistema está optimizado para despliegue en la nube
 
-## 🚢 Despliegue
+## 🚢 Despliegue en Producción (GRATIS)
 
-### Backend (Render, Railway, etc.)
+Este proyecto está configurado para desplegarse **gratuitamente** en:
+- **Vercel** (Frontend) - Despliegues ilimitados, SSL gratis
+- **Railway** (Backend) - $5 crédito inicial, ~500 horas/mes
+- **MongoDB Atlas** (Base de datos) - 512MB gratis
 
-1. Configurar variables de entorno en la plataforma
-2. Comando de inicio: `uvicorn server:app --host 0.0.0.0 --port $PORT`
+### 🚀 Despliegue Rápido (5 minutos)
 
-### Frontend (Vercel, Netlify, etc.)
+```bash
+# 1. Verificar que todo esté listo
+python check_deployment.py
 
-1. Configurar `REACT_APP_BACKEND_URL` con la URL del backend desplegado
-2. Comando de build: `yarn build`
-3. Directorio de publicación: `build`
+# 2. Subir a GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/TU-USUARIO/dashboard-clinico.git
+git push -u origin main
+
+# 3. Desplegar en Railway (Backend)
+# - Ir a railway.app → New Project → Deploy from GitHub
+# - Agregar variables de entorno (ver QUICK_DEPLOY.md)
+
+# 4. Desplegar en Vercel (Frontend)
+# - Ir a vercel.com → New Project → Import from GitHub
+# - Root Directory: frontend
+# - Agregar REACT_APP_BACKEND_URL
+```
+
+### 📚 Guías de Despliegue
+
+- **[Guía Rápida (5 min)](./QUICK_DEPLOY.md)** - Checklist paso a paso
+- **[Guía Completa](./DEPLOYMENT_GUIDE.md)** - Instrucciones detalladas con capturas
+
+### 🔒 Seguridad
+
+- ✅ Todos los archivos `.env` están bloqueados en `.gitignore`
+- ✅ Variables sensibles solo en plataformas de despliegue
+- ✅ CORS configurado para dominios específicos
+- ✅ SSL/HTTPS automático en Vercel y Railway
 
 ## 📄 Licencia
 
