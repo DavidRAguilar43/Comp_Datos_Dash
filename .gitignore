@@ -30,10 +30,32 @@ next-env.d.ts
 dist/
 dist
 
-# Environment files (comprehensive coverage)
+# ============================================
+# ARCHIVOS DE ENTORNO Y SEGURIDAD (PRIORIDAD MÁXIMA)
+# ============================================
+# Bloquear TODOS los archivos .env por seguridad
+.env
+.env.*
+!.env.example
+*.env
+**/.env
+**/.env.*
+!**/.env.example
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+env/.env
+env/.env.*
 
+# Tokens y credenciales
 *token.json*
 *credentials.json*
+*.pem
+*.key
+*.cert
+secrets.json
+config.local.json
 
 # Logs and debug files
 npm-debug.log*
@@ -77,11 +99,18 @@ agenthub/agents/youtube/db
 .cache/
 
 # Mobile development
-android-sdk/ -e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+android-sdk/
+
+# MongoDB y bases de datos
+*.mongodb
+mongo-data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de datos temporales
+*.csv.bak
+*.xlsx.bak
+temp_data/
+uploads/
+backup/
