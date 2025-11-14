@@ -13,9 +13,11 @@
 .env.development.local
 .env.test
 .env.test.local
-.env.production
 .env.production.local
 .env.staging
+
+# Exception: Allow frontend/.env.production (contains build config, not secrets)
+!frontend/.env.production
 
 # API Keys and Credentials
 *token.json*
