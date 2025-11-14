@@ -1,10 +1,50 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# IDE and editors
+# ============================================================================
+# ENVIRONMENT FILES - CRITICAL: Never commit these!
+# ============================================================================
+# Block ALL .env files
+.env
+.env.*
+*.env
+*.env.*
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+
+# API Keys and Credentials
+*token.json*
+*credentials.json*
+*secret*
+*secrets*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# ============================================================================
+# IDE AND EDITORS
+# ============================================================================
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
 
-# Dependencies
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+# Node.js
 node_modules/
 /node_modules
 /.pnp
@@ -15,78 +55,113 @@ node_modules/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
-# Testing
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================================================
+# TESTING
+# ============================================================================
 /coverage
+*.cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+test-results/
 
-# Next.js
-/.next/
+# ============================================================================
+# PRODUCTION BUILDS
+# ============================================================================
+/build
+/dist
+dist/
+build/
+*.egg-info/
+.next/
 /out/
 next-env.d.ts
 *.tsbuildinfo
 
-# Production builds
-/build
-dist/
-dist
-
-# ============================================
-# ARCHIVOS DE ENTORNO Y SEGURIDAD (PRIORIDAD MÁXIMA)
-# ============================================
-# Bloquear TODOS los archivos .env por seguridad
-.env
-.env.*
-!.env.example
-*.env
-**/.env
-**/.env.*
-!**/.env.example
-backend/.env
-backend/.env.*
-frontend/.env
-frontend/.env.*
-env/.env
-env/.env.*
-
-# Tokens y credenciales
-*token.json*
-*credentials.json*
-*.pem
-*.key
-*.cert
-secrets.json
-config.local.json
-
-# Logs and debug files
+# ============================================================================
+# LOGS AND DEBUG FILES
+# ============================================================================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+logs/
+*.log.*
 dump.rdb
+redis.rdb
 
-# System files
+# ============================================================================
+# SYSTEM FILES
+# ============================================================================
 .DS_Store
-*.pem
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-# Python
-__pycache__/
-*pyc*
-venv/
-.venv/
+# ============================================================================
+# DEPLOYMENT
+# ============================================================================
+.vercel
+.railway
+.netlify
+.now
 
-# Development tools
+# ============================================================================
+# DATABASES AND DATA
+# ============================================================================
+*.sqlite
+*.sqlite3
+*.db
+*.rdb
+agenthub/agents/youtube/db
+data/
+*.csv
+!CubanDataset.csv
+*.xlsx
+*.xls
+
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
 chainlit.md
 .chainlit
 .ipynb_checkpoints/
 .ac
+*.ipynb_checkpoints
 
-# Deployment
-.vercel
-
-# Data and databases
-agenthub/agents/youtube/db
-
-# Archive files and large assets
+# ============================================================================
+# ARCHIVE FILES AND LARGE ASSETS
+# ============================================================================
 **/*.zip
 **/*.tar.gz
 **/*.tar
@@ -94,23 +169,22 @@ agenthub/agents/youtube/db
 *.pack
 *.deb
 *.dylib
+*.rar
+*.7z
 
-# Build caches
+# ============================================================================
+# BUILD CACHES
+# ============================================================================
 .cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
 
-# Mobile development
-android-sdk/
-
-# MongoDB y bases de datos
-*.mongodb
-mongo-data/
-*.db
-*.sqlite
-*.sqlite3
-
-# Archivos de datos temporales
-*.csv.bak
-*.xlsx.bak
-temp_data/
-uploads/
-backup/
+# ============================================================================
+# TEMPORARY FILES
+# ============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
