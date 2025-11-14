@@ -26,18 +26,30 @@ The `eslint-plugin-react-hooks` package was missing from `package.json`, causing
 }
 ```
 
-### 2. Disabled ESLint for Production Builds
+### 2. Disabled ESLint for Production Builds in CRACO
+
+**Updated `frontend/craco.config.js`:**
+```javascript
+configure: (webpackConfig) => {
+  // Disable ESLint in production builds
+  if (process.env.NODE_ENV === 'production') {
+    webpackConfig.plugins = webpackConfig.plugins.filter(plugin => {
+      return !(plugin.constructor.name === 'ESLintWebpackPlugin');
+    });
+  }
+  ...
+}
+```
+
+This removes the ESLint plugin from webpack during production builds.
+
+### 3. Created `.env.production` for Backend URL
 
 **Created `frontend/.env.production`:**
 ```env
-# Disable ESLint during production build to avoid build failures
-DISABLE_ESLINT_PLUGIN=true
-
 # Backend API URL - will be overridden by Vercel environment variable
 REACT_APP_BACKEND_URL=https://your-app.railway.app
 ```
-
-This ensures builds succeed even if there are ESLint warnings.
 
 ### 3. Updated `.gitignore`
 
