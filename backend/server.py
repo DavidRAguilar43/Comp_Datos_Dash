@@ -17,14 +17,32 @@ import pandas as pd
 from services.data_processor import DataProcessor
 from services.ai_analyzer import AIAnalyzer
 
+# Configure logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongo_url = os.environ.get('MONGO_URL')
+db_name = os.environ.get('DB_NAME', 'breast_cancer_dashboard')
+
+# Initialize MongoDB client only if URL is provided
+client = None
+db = None
+if mongo_url:
+    try:
+        client = AsyncIOMotorClient(mongo_url)
+        db = client[db_name]
+        logging.info(f"MongoDB connected to database: {db_name}")
+    except Exception as e:
+        logging.error(f"Failed to connect to MongoDB: {str(e)}")
+else:
+    logging.warning("MONGO_URL not set. MongoDB features will be disabled.")
 
 # Create the main app without a prefix
 app = FastAPI(
@@ -511,13 +529,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if client:
+        client.close()
