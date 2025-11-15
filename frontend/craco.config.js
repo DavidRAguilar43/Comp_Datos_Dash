@@ -1,4 +1,5 @@
 // craco.config.js
+// ESLint is disabled for production builds to prevent build failures
 const path = require("path");
 require("dotenv").config();
 
