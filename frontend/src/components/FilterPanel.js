@@ -52,11 +52,10 @@ const FilterPanel = ({ onFilterChange, summary }) => {
     return active;
   }, [filters]);
 
-  // Reason: Notify parent component when filters change, without including onFilterChange in dependencies
+  // Reason: Notify parent component when filters change
   useEffect(() => {
     onFilterChange(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  }, [filters, onFilterChange]);
 
   const handleAgeChange = (values) => {
     setFilters(prev => ({
