@@ -24,6 +24,16 @@ class DataProcessor:
         """Initialize the data processor."""
         self.df: Optional[pd.DataFrame] = None
         self.original_df: Optional[pd.DataFrame] = None
+        self.preparation_log: Dict[str, Any] = {
+            "missing_data": {},
+            "imputation": {},
+            "duplicates": {},
+            "outliers": {},
+            "type_corrections": {},
+            "transformations": [],
+            "date_formatting": {},
+            "column_renaming": {}
+        }
         
     def load_from_bytes(self, file_bytes: bytes, filename: str) -> Dict[str, Any]:
         """
@@ -67,58 +77,141 @@ class DataProcessor:
     
     def clean_data(self) -> Dict[str, Any]:
         """
-        Clean the loaded dataset.
-        
+        Clean the loaded dataset with comprehensive logging.
+
         Performs:
         - Duplicate removal
-        - Missing value handling
+        - Missing value detection and imputation
         - Data type normalization
         - Text standardization
-        
+        - Outlier detection and treatment
+
         Returns:
             dict: Cleaning report with statistics.
         """
         if self.df is None:
             return {"success": False, "error": "No data loaded"}
-        
+
         initial_rows = len(self.df)
-        
-        # Remove duplicates
+
+        # 1. Detect missing values BEFORE any processing
+        missing_before = {}
+        for col in self.df.columns:
+            missing_count = self.df[col].isnull().sum()
+            if missing_count > 0:
+                missing_before[col] = {
+                    "count": int(missing_count),
+                    "percentage": round((missing_count / initial_rows) * 100, 2)
+                }
+        self.preparation_log["missing_data"]["before"] = missing_before
+
+        # 2. Remove duplicates
         duplicates_removed = self.df.duplicated().sum()
         self.df = self.df.drop_duplicates()
-        
-        # Handle missing values
-        missing_before = self.df.isnull().sum().to_dict()
-        
-        # Normalize text values (Yes/No, Sí/No, etc.)
-        text_columns = self.df.select_dtypes(include=['object']).columns
-        for col in text_columns:
-            if col in self.df.columns:
-                self.df[col] = self.df[col].astype(str).str.strip()
-                # Normalize Yes/No values
-                self.df[col] = self.df[col].replace({
-                    'Sí': 'Yes',
-                    'Si': 'Yes',
-                    'sí': 'Yes',
-                    'si': 'Yes',
-                    'YES': 'Yes',
-                    'yes': 'Yes',
-                    'NO': 'No',
-                    'no': 'No',
-                    'nan': np.nan,
-                    'NaN': np.nan,
-                    'None': np.nan
-                })
-        
-        missing_after = self.df.isnull().sum().to_dict()
-        
+        self.preparation_log["duplicates"] = {
+            "total_detected": int(duplicates_removed),
+            "removed": int(duplicates_removed),
+            "method": "drop_duplicates"
+        }
+
+        # 3. Impute missing values
+        imputation_log = {}
+        numeric_cols = self.df.select_dtypes(include=[np.number]).columns
+        categorical_cols = self.df.select_dtypes(include=['object']).columns
+
+        # Impute numeric columns with mean
+        for col in numeric_cols:
+            missing_count = self.df[col].isnull().sum()
+            if missing_count > 0:
+                mean_value = self.df[col].mean()
+                self.df[col].fillna(mean_value, inplace=True)
+                imputation_log[col] = {
+                    "values_imputed": int(missing_count),
+                    "method": "mean",
+                    "fill_value": float(mean_value)
+                }
+
+        # Impute categorical columns with mode
+        for col in categorical_cols:
+            # First, normalize text values
+            self.df[col] = self.df[col].astype(str).str.strip()
+            # Normalize Yes/No values
+            self.df[col] = self.df[col].replace({
+                'Sí': 'Yes',
+                'Si': 'Yes',
+                'sí': 'Yes',
+                'si': 'Yes',
+                'YES': 'Yes',
+                'yes': 'Yes',
+                'NO': 'No',
+                'no': 'No',
+                'nan': np.nan,
+                'NaN': np.nan,
+                'None': np.nan
+            })
+
+            missing_count = self.df[col].isnull().sum()
+            if missing_count > 0:
+                mode_values = self.df[col].mode()
+                if len(mode_values) > 0:
+                    mode_value = mode_values[0]
+                    self.df[col].fillna(mode_value, inplace=True)
+                    imputation_log[col] = {
+                        "values_imputed": int(missing_count),
+                        "method": "mode",
+                        "fill_value": str(mode_value)
+                    }
+
+        self.preparation_log["imputation"] = imputation_log
+
+        # 4. Detect and log outliers (using IQR method)
+        outliers_log = {}
+        for col in numeric_cols:
+            Q1 = self.df[col].quantile(0.25)
+            Q3 = self.df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+            outlier_mask = (self.df[col] < lower_bound) | (self.df[col] > upper_bound)
+            outlier_count = outlier_mask.sum()
+
+            if outlier_count > 0:
+                outliers_log[col] = {
+                    "count": int(outlier_count),
+                    "percentage": round((outlier_count / len(self.df)) * 100, 2),
+                    "lower_bound": float(lower_bound),
+                    "upper_bound": float(upper_bound),
+                    "treatment": "flagged"  # We're just flagging, not removing
+                }
+
+        self.preparation_log["outliers"] = outliers_log
+
+        # 5. Missing values AFTER processing
+        missing_after = {}
+        for col in self.df.columns:
+            missing_count = self.df[col].isnull().sum()
+            if missing_count > 0:
+                missing_after[col] = {
+                    "count": int(missing_count),
+                    "percentage": round((missing_count / len(self.df)) * 100, 2)
+                }
+        self.preparation_log["missing_data"]["after"] = missing_after
+
+        # Log text standardization
+        self.preparation_log["transformations"].append({
+            "operation": "text_standardization",
+            "columns_affected": list(categorical_cols),
+            "description": "Trimmed whitespace and normalized Yes/No values"
+        })
+
         return {
             "success": True,
             "initial_rows": initial_rows,
             "final_rows": len(self.df),
             "duplicates_removed": int(duplicates_removed),
-            "missing_values_before": {k: int(v) for k, v in missing_before.items() if v > 0},
-            "missing_values_after": {k: int(v) for k, v in missing_after.items() if v > 0}
+            "missing_values_before": {k: int(v["count"]) for k, v in missing_before.items()},
+            "missing_values_after": {k: int(v["count"]) for k, v in missing_after.items()}
         }
     
     def apply_filters(self, filters: Dict[str, Any]) -> pd.DataFrame:
@@ -497,17 +590,195 @@ class DataProcessor:
     def export_to_dict(self) -> Dict[str, Any]:
         """
         Export entire dataset as dictionary.
-        
+
         Returns:
             dict: Complete dataset.
         """
         if self.df is None:
             return {"success": False, "error": "No data loaded"}
-        
+
         return {
             "success": True,
             "data": self.df.to_dict(orient='records'),
             "columns": list(self.df.columns),
             "total_rows": len(self.df)
+        }
+
+    def apply_type_corrections(self) -> Dict[str, Any]:
+        """
+        Detect and correct data type inconsistencies.
+
+        Returns:
+            dict: Type correction report.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        type_corrections = {}
+
+        for col in self.df.columns:
+            original_type = str(self.df[col].dtype)
+
+            # Try to convert string columns that look like numbers
+            if self.df[col].dtype == 'object':
+                # Remove common symbols from numeric strings
+                sample = self.df[col].dropna().head(100)
+
+                # Check if values look like numbers with symbols
+                if sample.astype(str).str.match(r'^[\$\€\£]?[\d,\.]+$').any():
+                    try:
+                        # Clean and convert
+                        cleaned = self.df[col].astype(str).str.replace(r'[\$\€\£,]', '', regex=True)
+                        self.df[col] = pd.to_numeric(cleaned, errors='coerce')
+
+                        if str(self.df[col].dtype) != original_type:
+                            type_corrections[col] = {
+                                "original_type": original_type,
+                                "new_type": str(self.df[col].dtype),
+                                "reason": "Numeric values stored as text with symbols"
+                            }
+                    except:
+                        pass
+
+                # Check if values look like dates
+                elif sample.astype(str).str.match(r'\d{1,4}[-/]\d{1,2}[-/]\d{1,4}').any():
+                    try:
+                        self.df[col] = pd.to_datetime(self.df[col], errors='coerce')
+
+                        if str(self.df[col].dtype) != original_type:
+                            type_corrections[col] = {
+                                "original_type": original_type,
+                                "new_type": str(self.df[col].dtype),
+                                "reason": "Date values stored as text"
+                            }
+                    except:
+                        pass
+
+        self.preparation_log["type_corrections"] = type_corrections
+
+        if type_corrections:
+            self.preparation_log["transformations"].append({
+                "operation": "type_correction",
+                "columns_affected": list(type_corrections.keys()),
+                "description": "Corrected data types for better analysis"
+            })
+
+        return {
+            "success": True,
+            "corrections": type_corrections
+        }
+
+    def standardize_date_formats(self, date_format: str = "%Y-%m-%d") -> Dict[str, Any]:
+        """
+        Standardize all date columns to a consistent format.
+
+        Args:
+            date_format (str): Target date format (default: YYYY-MM-DD).
+
+        Returns:
+            dict: Date formatting report.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        date_formatting = {}
+
+        # Find datetime columns
+        datetime_cols = self.df.select_dtypes(include=['datetime64']).columns
+
+        for col in datetime_cols:
+            # Convert to string with specified format
+            original_sample = str(self.df[col].iloc[0]) if len(self.df) > 0 else "N/A"
+            self.df[col] = self.df[col].dt.strftime(date_format)
+
+            date_formatting[col] = {
+                "format_applied": date_format,
+                "example_before": original_sample,
+                "example_after": str(self.df[col].iloc[0]) if len(self.df) > 0 else "N/A"
+            }
+
+        self.preparation_log["date_formatting"] = date_formatting
+
+        if date_formatting:
+            self.preparation_log["transformations"].append({
+                "operation": "date_standardization",
+                "columns_affected": list(datetime_cols),
+                "description": f"Standardized date format to {date_format}"
+            })
+
+        return {
+            "success": True,
+            "formatted_columns": date_formatting
+        }
+
+    def rename_columns_for_clarity(self, rename_map: Dict[str, str] = None) -> Dict[str, Any]:
+        """
+        Rename columns for better clarity and consistency.
+
+        Args:
+            rename_map (dict, optional): Dictionary mapping old names to new names.
+                                        If None, applies automatic cleaning.
+
+        Returns:
+            dict: Column renaming report.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        renaming_log = {}
+
+        if rename_map:
+            # Use provided mapping
+            self.df.rename(columns=rename_map, inplace=True)
+            renaming_log = {old: new for old, new in rename_map.items() if old in self.df.columns or new in self.df.columns}
+        else:
+            # Automatic cleaning: lowercase, replace spaces with underscores
+            new_columns = {}
+            for col in self.df.columns:
+                new_name = col.lower().strip().replace(' ', '_').replace('-', '_')
+                if new_name != col:
+                    new_columns[col] = new_name
+
+            if new_columns:
+                self.df.rename(columns=new_columns, inplace=True)
+                renaming_log = new_columns
+
+        self.preparation_log["column_renaming"] = renaming_log
+
+        if renaming_log:
+            self.preparation_log["transformations"].append({
+                "operation": "column_renaming",
+                "columns_affected": list(renaming_log.keys()),
+                "description": "Renamed columns for clarity and consistency"
+            })
+
+        return {
+            "success": True,
+            "renamed_columns": renaming_log
+        }
+
+    def get_preparation_report(self) -> Dict[str, Any]:
+        """
+        Get comprehensive data preparation report.
+
+        Returns:
+            dict: Complete log of all data preparation operations performed.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        return {
+            "success": True,
+            "report": self.preparation_log,
+            "summary": {
+                "total_transformations": len(self.preparation_log["transformations"]),
+                "columns_with_missing_data_before": len(self.preparation_log["missing_data"].get("before", {})),
+                "columns_with_missing_data_after": len(self.preparation_log["missing_data"].get("after", {})),
+                "columns_imputed": len(self.preparation_log["imputation"]),
+                "duplicates_removed": self.preparation_log["duplicates"].get("removed", 0),
+                "columns_with_outliers": len(self.preparation_log["outliers"]),
+                "type_corrections_made": len(self.preparation_log["type_corrections"]),
+                "columns_renamed": len(self.preparation_log["column_renaming"])
+            }
         }
 

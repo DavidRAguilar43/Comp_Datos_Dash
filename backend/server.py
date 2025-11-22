@@ -270,6 +270,38 @@ async def get_data_quality():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@api_router.get("/data/preparation-report")
+async def get_preparation_report():
+    """
+    Get comprehensive data preparation report.
+
+    Returns detailed information about all data preparation operations:
+    - Missing data detection and imputation
+    - Duplicate removal
+    - Outlier detection
+    - Type corrections
+    - Transformations applied
+    - Date formatting
+    - Column renaming
+
+    Returns:
+        dict: Complete data preparation log with summary statistics.
+    """
+    try:
+        preparation_report = data_processor.get_preparation_report()
+
+        if not preparation_report.get("success"):
+            raise HTTPException(status_code=400, detail=preparation_report.get("error"))
+
+        return preparation_report
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting preparation report: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @api_router.post("/ai/analyze-summary")
 async def ai_analyze_summary():
     """
