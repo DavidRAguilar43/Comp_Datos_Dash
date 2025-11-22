@@ -14,7 +14,8 @@ import {
   Zap
 } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const API_URL = `${BACKEND_URL}/api`;
 
 /**
  * DataQuality component displays comprehensive data preparation report.
