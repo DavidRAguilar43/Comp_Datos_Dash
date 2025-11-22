@@ -7,13 +7,15 @@ import ClinicalFactors from './ClinicalFactors';
 import CorrelationsView from './CorrelationsView';
 import ExportPanel from './ExportPanel';
 import DataUnderstandingPanel from './DataUnderstandingPanel';
-import { Activity, BarChart3, Network, Download } from 'lucide-react';
+import DataQuality from './DataQuality';
+import { Activity, BarChart3, Network, Download, Shield } from 'lucide-react';
 
 /**
  * Main Dashboard component for breast cancer data analysis.
- * 
+ *
  * Provides tabbed interface for:
  * - General exploration
+ * - Data quality and preparation report
  * - Clinical factors analysis
  * - Correlations and patterns
  * - Data export
@@ -81,29 +83,36 @@ const Dashboard = () => {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm border border-pink-200 p-1">
-              <TabsTrigger 
-                value="exploration" 
+            <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur-sm border border-pink-200 p-1">
+              <TabsTrigger
+                value="exploration"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-100 data-[state=active]:to-pink-200 data-[state=active]:text-pink-900"
               >
                 <Activity className="w-4 h-4 mr-2" />
                 Exploración General
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
+                value="quality"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-100 data-[state=active]:to-teal-200 data-[state=active]:text-teal-900"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Calidad de Datos
+              </TabsTrigger>
+              <TabsTrigger
                 value="clinical"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-100 data-[state=active]:to-blue-200 data-[state=active]:text-blue-900"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 Factores Clínicos
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="correlations"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-100 data-[state=active]:to-green-200 data-[state=active]:text-green-900"
               >
                 <Network className="w-4 h-4 mr-2" />
                 Correlaciones
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="export"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-100 data-[state=active]:to-purple-200 data-[state=active]:text-purple-900"
               >
@@ -114,6 +123,10 @@ const Dashboard = () => {
 
             <TabsContent value="exploration" className="space-y-6">
               <DataSummary />
+            </TabsContent>
+
+            <TabsContent value="quality" className="space-y-6">
+              <DataQuality />
             </TabsContent>
 
             <TabsContent value="clinical" className="space-y-6">
