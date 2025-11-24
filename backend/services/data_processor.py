@@ -92,6 +92,9 @@ class DataProcessor:
         if self.df is None:
             return {"success": False, "error": "No data loaded"}
 
+        # Reset transformation log to avoid duplicates
+        self.preparation_log["transformations"] = []
+
         initial_rows = len(self.df)
 
         # 1. Detect missing values BEFORE any processing
@@ -124,7 +127,7 @@ class DataProcessor:
             missing_count = self.df[col].isnull().sum()
             if missing_count > 0:
                 mean_value = self.df[col].mean()
-                self.df[col].fillna(mean_value, inplace=True)
+                self.df[col] = self.df[col].fillna(mean_value)
                 imputation_log[col] = {
                     "values_imputed": int(missing_count),
                     "method": "mean",
@@ -155,7 +158,7 @@ class DataProcessor:
                 mode_values = self.df[col].mode()
                 if len(mode_values) > 0:
                     mode_value = mode_values[0]
-                    self.df[col].fillna(mode_value, inplace=True)
+                    self.df[col] = self.df[col].fillna(mode_value)
                     imputation_log[col] = {
                         "values_imputed": int(missing_count),
                         "method": "mode",
@@ -234,46 +237,99 @@ class DataProcessor:
             return None
 
         filtered_df = self.df.copy()
+        initial_count = len(filtered_df)
+        print(f"DEBUG: Starting with {initial_count} records")
+        print(f"DEBUG: Filters received: {filters}")
 
         # Age filter
         if filters.get('ageMin') is not None and filters.get('ageMax') is not None:
             if 'age' in filtered_df.columns:
+                before_count = len(filtered_df)
                 filtered_df = filtered_df[
                     (filtered_df['age'] >= filters['ageMin']) &
                     (filtered_df['age'] <= filters['ageMax'])
                 ]
+                after_count = len(filtered_df)
+                print(f"DEBUG: Age filter ({filters['ageMin']}-{filters['ageMax']}): {before_count} -> {after_count} records")
 
         # Diagnosis filter
         if filters.get('diagnosis') and filters['diagnosis'] != 'all':
             if 'cancer' in filtered_df.columns:
                 # Map diagnosis to cancer values
-                if filters['diagnosis'] == 'Maligno':
-                    filtered_df = filtered_df[filtered_df['cancer'] == 'Yes']
-                elif filters['diagnosis'] == 'Benigno':
-                    filtered_df = filtered_df[filtered_df['cancer'] == 'No']
+                try:
+                    before_count = len(filtered_df)
+                    print(f"DEBUG: Unique cancer values: {filtered_df['cancer'].unique()}")
+                    if filters['diagnosis'] == 'Maligno':
+                        filtered_df = filtered_df[filtered_df['cancer'] == 'Yes']
+                    elif filters['diagnosis'] == 'Benigno':
+                        filtered_df = filtered_df[filtered_df['cancer'] == 'No']
+                    after_count = len(filtered_df)
+                    print(f"DEBUG: Diagnosis filter ({filters['diagnosis']}): {before_count} -> {after_count} records")
+                except Exception as e:
+                    print(f"Warning: Error applying diagnosis filter: {e}")
 
         # Menopause filter
         if filters.get('menopause') and filters['menopause'] != 'all':
             if 'menopause' in filtered_df.columns:
                 # Check if menopause column has the value
-                if filters['menopause'] == 'Premenopáusica':
-                    filtered_df = filtered_df[filtered_df['menopause'] == 'No']
-                elif filters['menopause'] == 'Posmenopáusica':
-                    filtered_df = filtered_df[filtered_df['menopause'] != 'No']
+                try:
+                    before_count = len(filtered_df)
+                    print(f"DEBUG: Unique menopause values (first 20): {filtered_df['menopause'].unique()[:20]}")
+                    print(f"DEBUG: Menopause column dtype: {filtered_df['menopause'].dtype}")
+
+                    # Convert to string for consistent comparison
+                    menopause_str = filtered_df['menopause'].astype(str).str.strip()
+
+                    if filters['menopause'] == 'Premenopáusica':
+                        # Premenopause = "No" value
+                        filtered_df = filtered_df[menopause_str == 'No']
+                    elif filters['menopause'] == 'Posmenopáusica':
+                        # Postmenopause = any value that is NOT "No" (numbers indicating menopause age)
+                        filtered_df = filtered_df[menopause_str != 'No']
+
+                    after_count = len(filtered_df)
+                    print(f"DEBUG: Menopause filter ({filters['menopause']}): {before_count} -> {after_count} records")
+                except Exception as e:
+                    print(f"Warning: Error applying menopause filter: {e}")
+                    import traceback
+                    traceback.print_exc()
 
         # BIRADS filter
         if filters.get('birads') and filters['birads'] != 'all':
             if 'birads' in filtered_df.columns:
-                # Convert birads to string for comparison
-                filtered_df = filtered_df[filtered_df['birads'].astype(str).str.startswith(filters['birads'])]
+                try:
+                    before_count = len(filtered_df)
+                    print(f"DEBUG: Unique BIRADS values: {filtered_df['birads'].unique()}")
+                    print(f"DEBUG: BIRADS filter value: '{filters['birads']}'")
+                    # Convert birads to string and check if it starts with the filter value
+                    # Handle both numeric (1, 2, 3) and alphanumeric (3A, 3B, 4C) BIRADS values
+                    birads_str = filtered_df['birads'].astype(str).str.strip()
+                    # Filter by BIRADS number (e.g., "3" matches "3", "3A", "3B", "3C")
+                    filtered_df = filtered_df[birads_str.str.startswith(str(filters['birads']))]
+                    after_count = len(filtered_df)
+                    print(f"DEBUG: BIRADS filter ({filters['birads']}): {before_count} -> {after_count} records")
+                except Exception as e:
+                    print(f"Warning: Error applying BIRADS filter: {e}")
+                    import traceback
+                    traceback.print_exc()
 
         # Breastfeeding filter
         if filters.get('breastfeeding') and filters['breastfeeding'] != 'all':
             if 'breastfeeding' in filtered_df.columns:
-                if filters['breastfeeding'] == 'Sí':
-                    filtered_df = filtered_df[filtered_df['breastfeeding'] != 'No']
-                elif filters['breastfeeding'] == 'No':
-                    filtered_df = filtered_df[filtered_df['breastfeeding'] == 'No']
+                try:
+                    before_count = len(filtered_df)
+                    print(f"DEBUG: Unique breastfeeding values: {filtered_df['breastfeeding'].unique()}")
+                    if filters['breastfeeding'] == 'Sí':
+                        filtered_df = filtered_df[filtered_df['breastfeeding'] != 'No']
+                    elif filters['breastfeeding'] == 'No':
+                        filtered_df = filtered_df[filtered_df['breastfeeding'] == 'No']
+                    after_count = len(filtered_df)
+                    print(f"DEBUG: Breastfeeding filter ({filters['breastfeeding']}): {before_count} -> {after_count} records")
+                except Exception as e:
+                    print(f"Warning: Error applying breastfeeding filter: {e}")
+
+        final_count = len(filtered_df)
+        print(f"DEBUG: Final filtered records: {final_count} (from {initial_count})")
 
         return filtered_df
 
@@ -296,7 +352,21 @@ class DataProcessor:
 
         # Apply filters if provided
         df_to_analyze = self.apply_filters(filters) if filters else self.df
-        
+
+        # Check if filtered dataset is empty
+        if len(df_to_analyze) == 0:
+            return {
+                "success": True,
+                "total_records": 0,
+                "filtered_records": 0,
+                "original_records": len(self.df),
+                "numeric_stats": {},
+                "categorical_stats": {},
+                "cancer_distribution": {},
+                "age_statistics": {},
+                "message": "No records match the selected filters"
+            }
+
         summary = {
             "success": True,
             "total_records": len(df_to_analyze),
@@ -780,5 +850,176 @@ class DataProcessor:
                 "type_corrections_made": len(self.preparation_log["type_corrections"]),
                 "columns_renamed": len(self.preparation_log["column_renaming"])
             }
+        }
+
+    def get_dynamic_summary_statistics(
+        self,
+        column_analysis: List[Dict[str, Any]],
+        filters: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Calculate summary statistics dynamically based on detected column types.
+
+        Args:
+            column_analysis (list): Column analysis from DatasetStructureAnalyzer.
+            filters (dict, optional): Filter criteria to apply.
+
+        Returns:
+            dict: Dynamic statistical summary based on detected structure.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        # Apply filters if provided
+        df_to_analyze = self.apply_filters(filters) if filters else self.df
+
+        summary = {
+            "success": True,
+            "total_records": len(df_to_analyze),
+            "numeric_stats": {},
+            "categorical_stats": {},
+            "binary_stats": {},
+            "target_variable": None
+        }
+
+        # Process each column based on detected type
+        for col_info in column_analysis:
+            col_name = col_info["column_name"]
+            col_type = col_info["detected_type"]
+
+            if col_name not in df_to_analyze.columns:
+                continue
+
+            # Handle target variable
+            if col_info.get("is_target_variable", False):
+                summary["target_variable"] = {
+                    "name": col_name,
+                    "distribution": df_to_analyze[col_name].value_counts().to_dict()
+                }
+
+            # Handle numeric columns
+            if col_type in ["numeric_continuous", "numeric_discrete"]:
+                if pd.api.types.is_numeric_dtype(df_to_analyze[col_name]):
+                    summary["numeric_stats"][col_name] = {
+                        "mean": float(df_to_analyze[col_name].mean()),
+                        "median": float(df_to_analyze[col_name].median()),
+                        "std": float(df_to_analyze[col_name].std()),
+                        "min": float(df_to_analyze[col_name].min()),
+                        "max": float(df_to_analyze[col_name].max()),
+                        "q25": float(df_to_analyze[col_name].quantile(0.25)),
+                        "q75": float(df_to_analyze[col_name].quantile(0.75))
+                    }
+
+            # Handle categorical columns
+            elif col_type == "categorical":
+                value_counts = df_to_analyze[col_name].value_counts()
+                summary["categorical_stats"][col_name] = {
+                    "unique_values": int(df_to_analyze[col_name].nunique()),
+                    "distribution": value_counts.to_dict(),
+                    "top_value": str(value_counts.index[0]) if len(value_counts) > 0 else None,
+                    "top_count": int(value_counts.iloc[0]) if len(value_counts) > 0 else 0
+                }
+
+            # Handle binary columns
+            elif col_type == "binary":
+                value_counts = df_to_analyze[col_name].value_counts()
+                summary["binary_stats"][col_name] = {
+                    "distribution": value_counts.to_dict(),
+                    "positive_count": int(value_counts.iloc[0]) if len(value_counts) > 0 else 0,
+                    "negative_count": int(value_counts.iloc[1]) if len(value_counts) > 1 else 0
+                }
+
+        return summary
+
+    def get_dynamic_correlations(
+        self,
+        column_analysis: List[Dict[str, Any]],
+        method: str = 'pearson',
+        filters: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Calculate correlations dynamically based on detected numeric columns.
+
+        Args:
+            column_analysis (list): Column analysis from DatasetStructureAnalyzer.
+            method (str): Correlation method ('pearson', 'spearman', 'kendall').
+            filters (dict, optional): Filter criteria to apply.
+
+        Returns:
+            dict: Dynamic correlation analysis.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        # Apply filters if provided
+        df_to_analyze = self.apply_filters(filters) if filters else self.df
+
+        # Extract numeric columns from analysis
+        numeric_cols = [
+            col_info["column_name"]
+            for col_info in column_analysis
+            if col_info["detected_type"] in ["numeric_continuous", "numeric_discrete"]
+            and col_info["column_name"] in df_to_analyze.columns
+        ]
+
+        if len(numeric_cols) < 2:
+            return {
+                "success": False,
+                "error": "Not enough numeric columns for correlation analysis"
+            }
+
+        # Calculate correlations using existing method
+        return self.get_correlations(method=method, filters=filters)
+
+    def get_raw_data_sample(
+        self,
+        variables: List[str],
+        max_samples: int = 1000,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get raw data samples for specific variables (for scatter plots, histograms, etc.).
+
+        Args:
+            variables (list): List of variable names to retrieve.
+            max_samples (int): Maximum number of samples to return (default: 1000).
+            filters (dict, optional): Filter criteria to apply.
+
+        Returns:
+            dict: Raw data arrays for each variable.
+        """
+        if self.df is None:
+            return {"success": False, "error": "No data loaded"}
+
+        # Apply filters if provided
+        df_to_analyze = self.apply_filters(filters) if filters else self.df
+
+        if len(df_to_analyze) == 0:
+            return {
+                "success": True,
+                "total_records": 0,
+                "sampled_records": 0,
+                "data": {}
+            }
+
+        # Sample data if dataset is too large
+        if len(df_to_analyze) > max_samples:
+            df_sample = df_to_analyze.sample(n=max_samples, random_state=42)
+        else:
+            df_sample = df_to_analyze
+
+        # Extract data for requested variables
+        raw_data = {}
+        for variable in variables:
+            if variable in df_sample.columns:
+                # Convert to list, handling NaN values
+                values = df_sample[variable].dropna().tolist()
+                raw_data[variable] = values
+
+        return {
+            "success": True,
+            "total_records": len(df_to_analyze),
+            "sampled_records": len(df_sample),
+            "data": raw_data
         }
 

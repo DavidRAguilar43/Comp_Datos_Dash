@@ -200,11 +200,9 @@ const FilterPanel = ({ onFilterChange, summary }) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="1">BIRADS 1</SelectItem>
-              <SelectItem value="2">BIRADS 2</SelectItem>
-              <SelectItem value="3">BIRADS 3</SelectItem>
-              <SelectItem value="4">BIRADS 4</SelectItem>
-              <SelectItem value="5">BIRADS 5</SelectItem>
+              <SelectItem value="3">BIRADS 3 (3A, 3B, 3C)</SelectItem>
+              <SelectItem value="4">BIRADS 4 (4A, 4B, 4C)</SelectItem>
+              <SelectItem value="5">BIRADS 5 (5A, 5B, 5C)</SelectItem>
               <SelectItem value="6">BIRADS 6</SelectItem>
             </SelectContent>
           </Select>

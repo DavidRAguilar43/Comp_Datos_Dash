@@ -16,7 +16,7 @@ const API = `${BACKEND_URL}/api`;
  * CorrelationsView component displays correlation analysis.
  *
  * Shows:
- * - Correlation heatmap
+ * - Correlation heatmap (based on dataset numeric variables)
  * - Significant correlations list
  * - AI-generated correlation insights
  */
@@ -40,7 +40,9 @@ const CorrelationsView = () => {
         setIsChangingMethod(true);
       }
 
+      // Use static endpoint
       const response = await axios.get(`${API}/data/correlations?method=${method}`);
+
       setCorrelations(response.data);
       setError(null);
     } catch (err) {
@@ -157,6 +159,7 @@ const CorrelationsView = () => {
 
   return (
     <div className="space-y-6">
+
       {/* Controls */}
       <Card className="border-purple-200">
         <CardHeader>

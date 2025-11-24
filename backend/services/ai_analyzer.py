@@ -42,7 +42,54 @@ class AIAnalyzer:
             self.client = OpenAI(api_key=self.api_key)
 
         self.model = "gpt-4o"  # Using GPT-4o as specified
-    
+
+    def analyze_ml_model(self, model_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate insights from ML model performance metrics.
+
+        Args:
+            model_data (dict): Model performance data including metrics, confusion matrix, etc.
+
+        Returns:
+            dict: AI-generated insights about model performance.
+        """
+        try:
+            prompt = self._build_ml_model_prompt(model_data)
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """Eres un experto en machine learning aplicado a diagnóstico médico,
+                        especializado en modelos de clasificación para detección de cáncer de mama.
+                        Analiza las métricas del modelo y proporciona insights clínicos sobre su rendimiento,
+                        fortalezas, debilidades y recomendaciones. Responde en español de forma concisa y clara."""
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=500  # Reduced to save credits
+            )
+
+            insights = response.choices[0].message.content
+
+            return {
+                "success": True,
+                "insights": insights,
+                "model_used": self.model,
+                "tokens_used": response.usage.total_tokens
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     def analyze_summary_statistics(self, summary_stats: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate insights from summary statistics.
@@ -72,7 +119,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=1000
+                max_tokens=600  # Reduced to save credits
             )
             
             insights = response.choices[0].message.content
@@ -119,7 +166,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=800
+                max_tokens=500  # Reduced to save credits
             )
             
             insights = response.choices[0].message.content
@@ -179,7 +226,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=800  # Reduced to save credits
             )
             
             report = response.choices[0].message.content
@@ -229,7 +276,56 @@ Genera un análisis conciso destacando:
 4. Áreas que requieren mayor atención
 """
         return prompt
-    
+
+    def _build_ml_model_prompt(self, model_data: Dict[str, Any]) -> str:
+        """
+        Build prompt for ML model analysis.
+
+        Args:
+            model_data (dict): Model performance data.
+
+        Returns:
+            str: Formatted prompt.
+        """
+        model_name = model_data.get('model_name', 'Unknown')
+        test_metrics = model_data.get('test_metrics', {})
+        confusion_matrix = model_data.get('confusion_matrix', {}).get('test', [[0, 0], [0, 0]])
+
+        # Calculate additional metrics from confusion matrix
+        tn, fp, fn, tp = 0, 0, 0, 0
+        if len(confusion_matrix) == 2 and len(confusion_matrix[0]) == 2:
+            tn, fp = confusion_matrix[0]
+            fn, tp = confusion_matrix[1]
+
+        prompt = f"""Analiza el rendimiento del siguiente modelo de machine learning para
+detección de cáncer de mama:
+
+**Modelo:** {model_name}
+
+**Métricas de Rendimiento (Conjunto de Prueba):**
+- Exactitud (Accuracy): {test_metrics.get('accuracy', 0):.2%}
+- Precisión (Precision): {test_metrics.get('precision', 0):.2%}
+- Sensibilidad/Recall: {test_metrics.get('recall', 0):.2%}
+- F1-Score: {test_metrics.get('f1_score', 0):.2%}
+- ROC-AUC: {test_metrics.get('roc_auc', 0):.2%}
+
+**Matriz de Confusión:**
+- Verdaderos Negativos (TN): {tn}
+- Falsos Positivos (FP): {fp}
+- Falsos Negativos (FN): {fn}
+- Verdaderos Positivos (TP): {tp}
+
+**Proporciona un análisis que incluya:**
+1. **Evaluación General:** ¿Qué tan bueno es este modelo para detectar cáncer de mama?
+2. **Fortalezas:** ¿En qué aspectos destaca el modelo?
+3. **Debilidades:** ¿Qué limitaciones tiene? ¿Qué tipo de errores comete más?
+4. **Contexto Clínico:** En diagnóstico de cáncer, ¿es más crítico evitar falsos negativos o falsos positivos? ¿Cómo se desempeña el modelo en este aspecto?
+5. **Recomendaciones:** ¿Sería apropiado usar este modelo en un entorno clínico? ¿Qué mejoras sugerirías?
+
+Sé específico, conciso y enfócate en las implicaciones clínicas.
+"""
+        return prompt
+
     def _build_correlation_prompt(self, correlations: Dict[str, Any]) -> str:
         """
         Build prompt for correlation analysis.

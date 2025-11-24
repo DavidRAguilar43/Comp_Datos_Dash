@@ -13,11 +13,10 @@ const API = `${BACKEND_URL}/api`;
 
 /**
  * DataSummary component displays general statistics and AI insights.
- * 
+ *
  * Shows:
- * - Key metrics cards
- * - Cancer distribution chart
- * - Age distribution chart
+ * - Key metrics cards (based on dataset)
+ * - Distribution charts (static based on dataset structure)
  * - AI-generated insights
  */
 const DataSummary = () => {
@@ -52,9 +51,9 @@ const DataSummary = () => {
       setAiInsights(response.data);
     } catch (err) {
       console.error('Error fetching AI insights:', err);
-      setAiInsights({ 
-        success: false, 
-        error: 'Error al generar insights con IA. Verifique la configuración de OpenAI API.' 
+      setAiInsights({
+        success: false,
+        error: 'Error al generar insights con IA. Verifique la configuración de OpenAI API.'
       });
     } finally {
       setLoadingAI(false);
@@ -120,6 +119,56 @@ const DataSummary = () => {
     hovertemplate: '<b>Grupo: %{x}</b><br>Pacientes: %{y}<extra></extra>',
   }] : [];
 
+  // Prepare BIRADS distribution chart (or menopause if BIRADS not available)
+  const categoricalStats = summary?.categorical_stats || {};
+  let thirdChartData = [];
+  let thirdChartTitle = '';
+  let thirdChartDescription = '';
+
+  if (categoricalStats['birads']) {
+    thirdChartData = [{
+      values: Object.values(categoricalStats['birads']),
+      labels: Object.keys(categoricalStats['birads']),
+      type: 'pie',
+      marker: {
+        colors: ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa'],
+      },
+      textinfo: 'label+percent',
+      textposition: 'inside',
+      hovertemplate: '<b>%{label}</b><br>Casos: %{value}<br>Porcentaje: %{percent}<extra></extra>',
+    }];
+    thirdChartTitle = 'Distribución BIRADS';
+    thirdChartDescription = 'Clasificación de hallazgos mamográficos';
+  } else if (categoricalStats['menopause']) {
+    thirdChartData = [{
+      values: Object.values(categoricalStats['menopause']),
+      labels: Object.keys(categoricalStats['menopause']),
+      type: 'pie',
+      marker: {
+        colors: ['#60a5fa', '#f87171', '#fbbf24'],
+      },
+      textinfo: 'label+percent',
+      textposition: 'inside',
+      hovertemplate: '<b>%{label}</b><br>Casos: %{value}<br>Porcentaje: %{percent}<extra></extra>',
+    }];
+    thirdChartTitle = 'Distribución por Menopausia';
+    thirdChartDescription = 'Estado menopáusico de las pacientes';
+  } else if (categoricalStats['breastfeeding']) {
+    thirdChartData = [{
+      values: Object.values(categoricalStats['breastfeeding']),
+      labels: Object.keys(categoricalStats['breastfeeding']),
+      type: 'pie',
+      marker: {
+        colors: ['#60a5fa', '#f87171'],
+      },
+      textinfo: 'label+percent',
+      textposition: 'inside',
+      hovertemplate: '<b>%{label}</b><br>Casos: %{value}<br>Porcentaje: %{percent}<extra></extra>',
+    }];
+    thirdChartTitle = 'Historial de Lactancia';
+    thirdChartDescription = 'Distribución de pacientes por historial de lactancia';
+  }
+
   const chartLayout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
@@ -129,6 +178,7 @@ const DataSummary = () => {
 
   return (
     <div className="space-y-6">
+
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-white">
@@ -148,92 +198,116 @@ const DataSummary = () => {
           </CardContent>
         </Card>
 
+        {/* Static metric cards */}
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">
-              Edad Promedio
-            </CardTitle>
-            <Activity className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700">
-              {ageStats.mean_age?.toFixed(1) || 'N/A'}
-            </div>
-            <p className="text-xs text-gray-600 mt-1">
-              Rango: {ageStats.age_range?.min || 'N/A'} - {ageStats.age_range?.max || 'N/A'} años
-            </p>
-          </CardContent>
-        </Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Edad Promedio
+                </CardTitle>
+                <Activity className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-700">
+                  {ageStats.mean_age?.toFixed(1) || 'N/A'}
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  Rango: {ageStats.age_range?.min || 'N/A'} - {ageStats.age_range?.max || 'N/A'} años
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">
-              Casos Positivos
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-700">
-              {cancerDist.percentages?.Yes?.toFixed(1) || 'N/A'}%
-            </div>
-            <p className="text-xs text-gray-600 mt-1">
-              {cancerDist.counts?.Yes?.toLocaleString() || 0} pacientes
-            </p>
-          </CardContent>
-        </Card>
+            <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-700">
+                  Casos Positivos
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-700">
+                  {cancerDist.percentages?.Yes?.toFixed(1) || 'N/A'}%
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  {cancerDist.counts?.Yes?.toLocaleString() || 0} pacientes
+                </p>
+              </CardContent>
+            </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts - Static based on dataset */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-pink-200">
-          <CardHeader>
-            <CardTitle className="text-lg">Distribución de Diagnóstico</CardTitle>
-            <CardDescription>
-              Proporción de casos positivos y negativos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {cancerChartData.length > 0 ? (
-              <Plot
-                data={cancerChartData}
-                layout={{
-                  ...chartLayout,
-                  showlegend: true,
-                  legend: { orientation: 'h', y: -0.1 },
-                }}
-                config={{ displayModeBar: false, responsive: true }}
-                style={{ width: '100%', height: '300px' }}
-              />
-            ) : (
-              <p className="text-center text-gray-500">No hay datos disponibles</p>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-pink-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Distribución de Diagnóstico</CardTitle>
+              <CardDescription>
+                Proporción de casos positivos y negativos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cancerChartData.length > 0 ? (
+                <Plot
+                  data={cancerChartData}
+                  layout={{
+                    ...chartLayout,
+                    showlegend: true,
+                    legend: { orientation: 'h', y: -0.1 },
+                  }}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: '100%', height: '300px' }}
+                />
+              ) : (
+                <p className="text-center text-gray-500">No hay datos disponibles</p>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-lg">Distribución por Edad</CardTitle>
-            <CardDescription>
-              Número de pacientes por grupo etario
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {ageGroupsData.length > 0 ? (
-              <Plot
-                data={ageGroupsData}
-                layout={{
-                  ...chartLayout,
-                  xaxis: { title: 'Grupo de Edad' },
-                  yaxis: { title: 'Número de Pacientes' },
-                }}
-                config={{ displayModeBar: false, responsive: true }}
-                style={{ width: '100%', height: '300px' }}
-              />
-            ) : (
-              <p className="text-center text-gray-500">No hay datos disponibles</p>
-            )}
-          </CardContent>
-        </Card>
+          <Card className="border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg">Distribución por Edad</CardTitle>
+              <CardDescription>
+                Número de pacientes por grupo etario
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ageGroupsData.length > 0 ? (
+                <Plot
+                  data={ageGroupsData}
+                  layout={{
+                    ...chartLayout,
+                    xaxis: { title: 'Grupo de Edad' },
+                    yaxis: { title: 'Número de Pacientes' },
+                  }}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: '100%', height: '300px' }}
+                />
+              ) : (
+                <p className="text-center text-gray-500">No hay datos disponibles</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {thirdChartData.length > 0 && (
+            <Card className="border-green-200">
+              <CardHeader>
+                <CardTitle className="text-lg">{thirdChartTitle}</CardTitle>
+                <CardDescription>
+                  {thirdChartDescription}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Plot
+                  data={thirdChartData}
+                  layout={{
+                    ...chartLayout,
+                    showlegend: true,
+                    legend: { orientation: 'h', y: -0.1 },
+                  }}
+                  config={{ displayModeBar: false, responsive: true }}
+                  style={{ width: '100%', height: '300px' }}
+                />
+              </CardContent>
+            </Card>
+          )}
       </div>
 
       {/* AI Insights */}

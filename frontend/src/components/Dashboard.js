@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 import FileUploader from './FileUploader';
 import DataSummary from './DataSummary';
 import ClinicalFactors from './ClinicalFactors';
 import CorrelationsView from './CorrelationsView';
-import ExportPanel from './ExportPanel';
+import MLModels from './MLModels';
+import PredictionForm from './PredictionForm';
 import DataUnderstandingPanel from './DataUnderstandingPanel';
 import DataQuality from './DataQuality';
-import { Activity, BarChart3, Network, Download, Shield } from 'lucide-react';
+import { Activity, BarChart3, Network, Brain, Shield, Target, LogOut, User } from 'lucide-react';
 
 /**
  * Main Dashboard component for breast cancer data analysis.
@@ -24,6 +26,7 @@ const Dashboard = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [uploadInfo, setUploadInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('exploration');
+  const { user, logout } = useAuth();
 
   const handleDataUploaded = (info) => {
     setUploadInfo(info);
@@ -60,6 +63,22 @@ const Dashboard = () => {
                   </p>
                 </div>
               )}
+
+              {/* User Info and Logout */}
+              <div className="flex items-center gap-3 border-l border-gray-300 pl-4">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">{user?.full_name || user?.email}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 rounded-md transition-all"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Salir
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -83,7 +102,7 @@ const Dashboard = () => {
           </Card>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur-sm border border-pink-200 p-1">
+            <TabsList className="grid w-full grid-cols-6 bg-white/80 backdrop-blur-sm border border-pink-200 p-1">
               <TabsTrigger
                 value="exploration"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-100 data-[state=active]:to-pink-200 data-[state=active]:text-pink-900"
@@ -113,11 +132,18 @@ const Dashboard = () => {
                 Correlaciones
               </TabsTrigger>
               <TabsTrigger
-                value="export"
+                value="models"
                 className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-100 data-[state=active]:to-purple-200 data-[state=active]:text-purple-900"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar
+                <Brain className="w-4 h-4 mr-2" />
+                Modelos ML
+              </TabsTrigger>
+              <TabsTrigger
+                value="prediction"
+                className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-100 data-[state=active]:to-orange-200 data-[state=active]:text-orange-900"
+              >
+                <Target className="w-4 h-4 mr-2" />
+                Predicción
               </TabsTrigger>
             </TabsList>
 
@@ -137,8 +163,12 @@ const Dashboard = () => {
               <CorrelationsView />
             </TabsContent>
 
-            <TabsContent value="export" className="space-y-6">
-              <ExportPanel />
+            <TabsContent value="models" className="space-y-6">
+              <MLModels />
+            </TabsContent>
+
+            <TabsContent value="prediction" className="space-y-6">
+              <PredictionForm />
             </TabsContent>
           </Tabs>
         )}

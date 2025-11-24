@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import Plot from 'react-plotly.js';
 import axios from 'axios';
-import { AlertCircle, BarChart3, PieChart } from 'lucide-react';
+import { AlertCircle, BarChart3, PieChart, Sparkles, Loader2 } from 'lucide-react';
 import FilterPanel from './FilterPanel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -26,11 +28,15 @@ const ClinicalFactors = () => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(null);
   const [isFilteringData, setIsFilteringData] = useState(false);
+  const [aiInsights, setAiInsights] = useState(null);
+  const [loadingAI, setLoadingAI] = useState(false);
   const debounceTimerRef = useRef(null);
 
   // Reason: Memoize fetchSummary to prevent unnecessary re-renders
   const fetchSummary = useCallback(async (currentFilters, isInitialLoad = false) => {
     try {
+      console.log('🔍 ClinicalFactors: fetchSummary called', { currentFilters, isInitialLoad });
+
       // Reason: Only show skeleton on initial load, not on filter changes
       if (isInitialLoad) {
         setLoading(true);
@@ -50,12 +56,24 @@ const ClinicalFactors = () => {
       }
 
       const url = `${API}/data/summary${params.toString() ? '?' + params.toString() : ''}`;
+      console.log('📡 ClinicalFactors: Fetching URL:', url);
+
       const response = await axios.get(url);
+      console.log('✅ ClinicalFactors: Response received', {
+        total_records: response.data.total_records,
+        filtered_records: response.data.filtered_records
+      });
+
       setSummary(response.data);
       setError(null);
     } catch (err) {
-      setError('Error al cargar datos clínicos');
-      console.error(err);
+      console.error('❌ ClinicalFactors: Error fetching summary', err);
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      setError('Error al cargar datos clínicos: ' + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
       setIsFilteringData(false);
@@ -72,6 +90,22 @@ const ClinicalFactors = () => {
     fetchSummary(null, true);
   }, [fetchSummary]);
 
+  const fetchAIInsights = async () => {
+    try {
+      setLoadingAI(true);
+      const response = await axios.post(`${API}/ai/analyze-summary`);
+      setAiInsights(response.data);
+    } catch (err) {
+      console.error('Error fetching AI insights:', err);
+      setAiInsights({
+        success: false,
+        error: 'Error al generar insights con IA. Verifique la configuración de OpenAI API.'
+      });
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   // Reason: Debounced filter changes to prevent excessive API calls
   useEffect(() => {
     if (filters !== null) {
@@ -83,6 +117,8 @@ const ClinicalFactors = () => {
       // Set new timer for debounced API call
       debounceTimerRef.current = setTimeout(() => {
         fetchSummary(filters, false);
+        // Reset AI insights when filters change
+        setAiInsights(null);
       }, 300); // 300ms debounce delay
 
       // Cleanup function
@@ -117,6 +153,22 @@ const ClinicalFactors = () => {
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
       </Alert>
+    );
+  }
+
+  // Check if no records match the filters
+  if (summary && summary.filtered_records === 0) {
+    return (
+      <div className="space-y-6">
+        <FilterPanel onFilterChange={handleFilterChange} summary={summary} />
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No se encontraron registros que coincidan con los filtros seleccionados.
+            Por favor, ajusta los filtros para ver los datos.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
@@ -419,6 +471,70 @@ const ClinicalFactors = () => {
               )}
             </TabsContent>
           </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* AI Insights */}
+      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                Insights de Factores Clínicos con IA
+              </CardTitle>
+              <CardDescription>
+                Análisis automático de patrones en factores clínicos y de riesgo
+              </CardDescription>
+            </div>
+            {!aiInsights && (
+              <Button
+                onClick={fetchAIInsights}
+                disabled={loadingAI}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                {loadingAI ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generar Insights
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {aiInsights ? (
+            aiInsights.success ? (
+              <div className="prose prose-sm max-w-none">
+                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                  {aiInsights.insights}
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    Modelo: {aiInsights.model_used}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    Tokens: {aiInsights.tokens_used}
+                  </Badge>
+                </div>
+              </div>
+            ) : (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{aiInsights.error}</AlertDescription>
+              </Alert>
+            )
+          ) : (
+            <p className="text-gray-500 text-center py-8">
+              Haga clic en "Generar Insights" para obtener un análisis automático de los factores clínicos
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
