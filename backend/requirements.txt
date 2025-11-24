@@ -25,11 +25,6 @@ scikit-learn>=1.5.0
 pydantic==2.12.4
 email-validator==2.3.0
 
-# Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.20
-
 # Other utilities
 python-dateutil==2.9.0.post0
 requests==2.32.5

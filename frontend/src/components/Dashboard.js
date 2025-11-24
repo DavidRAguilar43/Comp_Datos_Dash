@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
 import FileUploader from './FileUploader';
 import DataSummary from './DataSummary';
 import ClinicalFactors from './ClinicalFactors';
@@ -10,7 +9,7 @@ import MLModels from './MLModels';
 import PredictionForm from './PredictionForm';
 import DataUnderstandingPanel from './DataUnderstandingPanel';
 import DataQuality from './DataQuality';
-import { Activity, BarChart3, Network, Brain, Shield, Target, LogOut, User } from 'lucide-react';
+import { Activity, BarChart3, Network, Brain, Shield, Target } from 'lucide-react';
 
 /**
  * Main Dashboard component for breast cancer data analysis.
@@ -26,7 +25,6 @@ const Dashboard = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [uploadInfo, setUploadInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('exploration');
-  const { user, logout } = useAuth();
 
   const handleDataUploaded = (info) => {
     setUploadInfo(info);
@@ -63,22 +61,6 @@ const Dashboard = () => {
                   </p>
                 </div>
               )}
-
-              {/* User Info and Logout */}
-              <div className="flex items-center gap-3 border-l border-gray-300 pl-4">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <User className="w-4 h-4" />
-                  <span className="font-medium">{user?.full_name || user?.email}</span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 rounded-md transition-all"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Salir
-                </button>
-              </div>
             </div>
           </div>
         </div>

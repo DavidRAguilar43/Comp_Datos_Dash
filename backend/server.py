@@ -1,17 +1,15 @@
 from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Depends, status
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from jose import JWTError, jwt
 import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Dict, Any, Optional
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import io
 import pandas as pd
 
@@ -20,7 +18,6 @@ from services.data_processor import DataProcessor
 from services.ai_analyzer import AIAnalyzer
 from services.dataset_structure_analyzer import DatasetStructureAnalyzer
 from services.ml_models import MLModelsService
-from services.auth import AuthService, UserCreate, UserLogin, Token, User
 
 # Configure logging first
 logging.basicConfig(
@@ -64,47 +61,6 @@ data_processor = DataProcessor()
 ai_analyzer = None  # Will be initialized when API key is available
 structure_analyzer = None  # Will be initialized when API key is available
 ml_service = MLModelsService()
-auth_service = AuthService(db)
-
-# Security
-security = HTTPBearer()
-SECRET_KEY = os.environ.get("JWT_SECRET", "your-secret-key-change-this-in-production")
-ALGORITHM = "HS256"
-
-
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
-    """
-    Dependency to get the current authenticated user from JWT token.
-
-    Args:
-        credentials: HTTP Bearer token credentials
-
-    Returns:
-        User: Current authenticated user
-
-    Raises:
-        HTTPException: If token is invalid or user not found
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = await auth_service.get_user(email=email)
-    if user is None:
-        raise credentials_exception
-
-    return user
 
 
 # Define Models
@@ -117,141 +73,6 @@ class StatusCheck(BaseModel):
 
 class StatusCheckCreate(BaseModel):
     client_name: str
-
-# ============================================================================
-# AUTHENTICATION ENDPOINTS
-# ============================================================================
-
-@api_router.post("/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate):
-    """
-    Register a new user.
-
-    Args:
-        user_data: User registration data (email, password, full_name)
-
-    Returns:
-        Token: JWT access token and user information
-
-    Raises:
-        HTTPException: If user already exists or database error
-    """
-    if not db:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database not available"
-        )
-
-    # Check if user already exists
-    existing_user = await auth_service.get_user(user_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-
-    # Create new user
-    hashed_password = auth_service.get_password_hash(user_data.password)
-    user_dict = {
-        "email": user_data.email,
-        "full_name": user_data.full_name,
-        "hashed_password": hashed_password,
-        "is_active": True,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-
-    try:
-        await db.users.insert_one(user_dict)
-        logger.info(f"New user registered: {user_data.email}")
-    except Exception as e:
-        logger.error(f"Error creating user: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating user"
-        )
-
-    # Create access token
-    access_token = auth_service.create_access_token(
-        data={"sub": user_data.email}
-    )
-
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        user={
-            "email": user_data.email,
-            "full_name": user_data.full_name
-        }
-    )
-
-
-@api_router.post("/auth/login", response_model=Token)
-async def login(user_credentials: UserLogin):
-    """
-    Login with email and password.
-
-    Args:
-        user_credentials: User login credentials (email, password)
-
-    Returns:
-        Token: JWT access token and user information
-
-    Raises:
-        HTTPException: If credentials are invalid
-    """
-    if not db:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database not available"
-        )
-
-    # Authenticate user
-    user = await auth_service.authenticate_user(
-        user_credentials.email,
-        user_credentials.password
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Create access token
-    access_token = auth_service.create_access_token(
-        data={"sub": user.email}
-    )
-
-    logger.info(f"User logged in: {user.email}")
-
-    return Token(
-        access_token=access_token,
-        token_type="bearer",
-        user={
-            "email": user.email,
-            "full_name": user.full_name
-        }
-    )
-
-
-@api_router.get("/auth/me")
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """
-    Get current authenticated user information.
-
-    Args:
-        current_user: Current authenticated user (from JWT token)
-
-    Returns:
-        dict: User information
-    """
-    return {
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "is_active": current_user.is_active
-    }
-
 
 # ============================================================================
 # PUBLIC ENDPOINTS
