@@ -16,8 +16,10 @@
 .env.production.local
 .env.staging
 
-# Exception: Allow frontend/.env.production (contains build config, not secrets)
+# Exceptions: Allow example files and frontend production config
 !frontend/.env.production
+!**/.env.example
+!.env.example
 
 # API Keys and Credentials
 *token.json*
