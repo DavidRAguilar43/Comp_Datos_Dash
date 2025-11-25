@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Activity, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+const API = `${BACKEND_URL}/api`;
 
 /**
  * PredictionForm component for breast cancer risk prediction.
