@@ -65,6 +65,8 @@ Se actualizó la clave de OpenAI:
 OPENAI_API_KEY=tu_openrouter_api_key_aqui
 ```
 
+**⚠️ SEGURIDAD:** Nunca incluyas API keys reales en archivos de documentación o código que se suba a Git.
+
 ## Flujo de Manejo de Errores
 
 ```

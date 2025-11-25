@@ -29,6 +29,10 @@
 *.p12
 *.pfx
 
+# Documentation with sensitive data (use .example versions instead)
+**/*_PRIVATE.md
+**/*_SECRET.md
+
 # ============================================================================
 # IDE AND EDITORS
 # ============================================================================
