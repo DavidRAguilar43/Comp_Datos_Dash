@@ -519,7 +519,7 @@ class MLModelsService:
                 risk_color = "green"
             elif probability_cancer < 0.6:
                 risk_level = "Moderado"
-                risk_color = "yellow"
+                risk_color = "orange"  # Changed from yellow to orange for better visibility
             else:
                 risk_level = "Alto"
                 risk_color = "red"

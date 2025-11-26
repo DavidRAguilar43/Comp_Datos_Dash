@@ -110,6 +110,8 @@ const PredictionForm = () => {
         return <CheckCircle2 className="h-12 w-12 text-green-600" />;
       case 'yellow':
         return <AlertTriangle className="h-12 w-12 text-yellow-600" />;
+      case 'orange':
+        return <AlertTriangle className="h-12 w-12 text-orange-600" />;
       case 'red':
         return <AlertCircle className="h-12 w-12 text-red-600" />;
       default:
@@ -123,6 +125,8 @@ const PredictionForm = () => {
         return 'from-green-50 to-green-100 border-green-300';
       case 'yellow':
         return 'from-yellow-50 to-yellow-100 border-yellow-300';
+      case 'orange':
+        return 'from-orange-50 to-orange-100 border-orange-300';
       case 'red':
         return 'from-red-50 to-red-100 border-red-300';
       default:
@@ -350,6 +354,7 @@ const PredictionForm = () => {
                 className={`h-full transition-all duration-500 ${
                   result.risk_color === 'green' ? 'bg-green-500' :
                   result.risk_color === 'yellow' ? 'bg-yellow-500' :
+                  result.risk_color === 'orange' ? 'bg-orange-500' :
                   'bg-red-500'
                 }`}
                 style={{ width: `${result.probability_percentage}%` }}
