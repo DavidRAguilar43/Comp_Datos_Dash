@@ -72,7 +72,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=500  # Reduced to save credits
+                max_tokens=350  # Reduced to fit within free credits
             )
 
             insights = response.choices[0].message.content
@@ -119,7 +119,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=600  # Reduced to save credits
+                max_tokens=400  # Reduced to fit within free credits
             )
             
             insights = response.choices[0].message.content
@@ -166,7 +166,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=500  # Reduced to save credits
+                max_tokens=350  # Reduced to fit within free credits
             )
             
             insights = response.choices[0].message.content
@@ -226,7 +226,7 @@ class AIAnalyzer:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=800  # Reduced to save credits
+                max_tokens=400  # Reduced to fit within free credits
             )
             
             report = response.choices[0].message.content
