@@ -203,6 +203,15 @@ const CorrelationsView = () => {
           <CardDescription>
             Matriz de correlaciones entre variables numéricas (método: {method})
           </CardDescription>
+          <Alert className="mt-3 border-blue-200 bg-blue-50">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-sm text-blue-800">
+              <strong>Nota:</strong> Esta matriz solo incluye variables numéricas (age, year, imc, weight, etc.).
+              Las variables categóricas (menopause, menarche, biopsies, histological_class) no se pueden incluir
+              en una matriz de correlación de Pearson/Spearman ya que requieren métodos estadísticos diferentes
+              como Chi-cuadrado o V de Cramér.
+            </AlertDescription>
+          </Alert>
         </CardHeader>
         <CardContent>
           {variables.length > 0 ? (

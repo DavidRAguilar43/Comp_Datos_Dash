@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   BookOpen,
@@ -36,6 +37,7 @@ const DataUnderstandingPanel = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedClassVar, setSelectedClassVar] = useState(null);
 
   useEffect(() => {
     if (isOpen && !qualityData && !loading) {
@@ -53,6 +55,11 @@ const DataUnderstandingPanel = () => {
       }
       const data = await response.json();
       setQualityData(data);
+
+      // Set first categorical variable as default
+      if (data.class_balance && Object.keys(data.class_balance).length > 0) {
+        setSelectedClassVar(Object.keys(data.class_balance)[0]);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -273,11 +280,31 @@ const DataUnderstandingPanel = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(qualityData.class_balance).slice(0, 3).map(([col, values]) => (
-                      <div key={col} className="space-y-2">
-                        <p className="font-medium text-sm text-gray-800">{col}</p>
+                    {/* Variable Selector */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Seleccionar variable:
+                      </label>
+                      <Select value={selectedClassVar} onValueChange={setSelectedClassVar}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Seleccione una variable" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(qualityData.class_balance).map((varName) => (
+                            <SelectItem key={varName} value={varName}>
+                              {varName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Display selected variable distribution */}
+                    {selectedClassVar && qualityData.class_balance[selectedClassVar] && (
+                      <div className="space-y-2">
+                        <p className="font-medium text-sm text-gray-800">{selectedClassVar}</p>
                         <div className="space-y-1">
-                          {Object.entries(values).map(([value, data]) => (
+                          {Object.entries(qualityData.class_balance[selectedClassVar]).map(([value, data]) => (
                             <div key={value} className="flex items-center justify-between text-xs">
                               <span className="text-gray-600">{value}</span>
                               <div className="flex items-center gap-2">
@@ -295,7 +322,7 @@ const DataUnderstandingPanel = () => {
                           ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>

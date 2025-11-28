@@ -295,7 +295,7 @@ const DataQuality = () => {
               Detección de Valores Atípicos
             </CardTitle>
             <CardDescription>
-              Valores atípicos detectados usando el método IQR (Rango Intercuartílico)
+              Valores atípicos detectados usando rangos clínicos (age: 18-90, imc: 15-50, weight: 40-150) y percentiles (1%-99%) para otras variables
             </CardDescription>
           </CardHeader>
           <CardContent>

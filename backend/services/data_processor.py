@@ -167,27 +167,11 @@ class DataProcessor:
 
         self.preparation_log["imputation"] = imputation_log
 
-        # 4. Detect and log outliers (using IQR method)
+        # 4. Detect and log outliers (no processing, just logging for reference)
+        # Reason: We don't remove outliers in clinical data, just flag them
         outliers_log = {}
-        for col in numeric_cols:
-            Q1 = self.df[col].quantile(0.25)
-            Q3 = self.df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            lower_bound = Q1 - 1.5 * IQR
-            upper_bound = Q3 + 1.5 * IQR
-
-            outlier_mask = (self.df[col] < lower_bound) | (self.df[col] > upper_bound)
-            outlier_count = outlier_mask.sum()
-
-            if outlier_count > 0:
-                outliers_log[col] = {
-                    "count": int(outlier_count),
-                    "percentage": round((outlier_count / len(self.df)) * 100, 2),
-                    "lower_bound": float(lower_bound),
-                    "upper_bound": float(upper_bound),
-                    "treatment": "flagged"  # We're just flagging, not removing
-                }
-
+        # Note: Outlier detection is done in get_quality_summary() for reporting
+        # Here we just initialize an empty log since we don't process outliers
         self.preparation_log["outliers"] = outliers_log
 
         # 5. Missing values AFTER processing
@@ -553,16 +537,36 @@ class DataProcessor:
             duplicates_count = int(self.df.duplicated().sum())
             duplicates_percentage = round((duplicates_count / total_rows) * 100, 2)
 
-            # 3. Outliers detection (for numeric columns using IQR method)
+            # 3. Outliers detection (using percentiles and clinical ranges)
+            # Reason: Percentiles are more robust for clinical data with non-normal distributions
             outliers = {}
             numeric_cols = self.df.select_dtypes(include=[np.number]).columns
-            for col in numeric_cols:
-                Q1 = self.df[col].quantile(0.25)
-                Q3 = self.df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
 
+            # Define clinical ranges for specific variables
+            # Reason: Clinical data has known valid ranges based on medical knowledge
+            clinical_ranges = {
+                'age': (18, 90),      # Valid age range for adult patients
+                'imc': (15, 50),      # Valid BMI range (extreme underweight to extreme obesity)
+                'weight': (40, 150)   # Valid weight range in kg
+            }
+
+            for col in numeric_cols:
+                # Skip if all values are the same
+                if self.df[col].nunique() <= 1:
+                    continue
+
+                # Determine bounds based on clinical ranges or percentiles
+                if col in clinical_ranges:
+                    # Use predefined clinical ranges
+                    lower_bound, upper_bound = clinical_ranges[col]
+                    method = f"Clinical range ({lower_bound}-{upper_bound})"
+                else:
+                    # Use percentiles (1% and 99%) for other numeric variables
+                    lower_bound = self.df[col].quantile(0.01)
+                    upper_bound = self.df[col].quantile(0.99)
+                    method = "Percentiles (1%-99%)"
+
+                # Detect outliers outside the bounds
                 outlier_mask = (self.df[col] < lower_bound) | (self.df[col] > upper_bound)
                 outlier_count = outlier_mask.sum()
 
@@ -571,7 +575,8 @@ class DataProcessor:
                         "count": int(outlier_count),
                         "percentage": round((outlier_count / total_rows) * 100, 2),
                         "lower_bound": float(lower_bound),
-                        "upper_bound": float(upper_bound)
+                        "upper_bound": float(upper_bound),
+                        "method": method
                     }
 
             # 4. Class balance (for categorical columns)
